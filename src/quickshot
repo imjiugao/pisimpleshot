@@ -11,6 +11,7 @@
 并用 com.canonical.dbusmenu 提供右键菜单，左键 Activate 即触发截图。
 """
 
+import configparser
 import datetime
 import os
 import shutil
@@ -23,6 +24,37 @@ gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import GdkPixbuf, GLib, Gio, Gtk
 
 SAVE_DIR = os.path.expanduser("~/Pictures/Screenshots")
+CONFIG_DIR = os.path.expanduser("~/.config/quickshot")
+CONFIG_FILE = os.path.join(CONFIG_DIR, "config.ini")
+
+DEFAULT_CONFIG = """[quickshot]
+# 截图完成后是否显示提示弹窗：true / false
+# 修改保存后立即生效，无需重启程序
+show_popup = true
+"""
+
+
+def ensure_config():
+    """首次运行时生成默认配置文件，已有则保留用户修改。"""
+    os.makedirs(CONFIG_DIR, exist_ok=True)
+    if not os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                f.write(DEFAULT_CONFIG)
+        except OSError:
+            pass
+
+
+def popups_enabled():
+    """读取弹窗开关。每次调用都重新读取文件，改动立即生效；出错时默认开启。"""
+    try:
+        cp = configparser.ConfigParser()
+        cp.read(CONFIG_FILE, encoding="utf-8")
+        return cp.getboolean("quickshot", "show_popup", fallback=True)
+    except Exception:
+        return True
+
+
 ICON_PNG = os.path.expanduser("~/.local/share/icons/hicolor/48x48/apps/quickshot.png")
 ICON_SVG = os.path.expanduser("~/.local/share/icons/hicolor/scalable/apps/quickshot.svg")
 ITEM_PATH = "/StatusNotifierItem"
@@ -160,6 +192,7 @@ class QuickShot:
     ]
 
     def __init__(self):
+        ensure_config()
         self.revision = 1
         self._pixmap = icon_pixmap() if os.path.exists(ICON_PNG) else \
             GLib.Variant("a(iiay)", [])
@@ -371,7 +404,8 @@ class QuickShot:
 
     def shot_delay(self, *_args):
         path = self.new_path()
-        self.popup("3 秒后开始全屏截图…")
+        if popups_enabled():
+            self.popup("3 秒后开始全屏截图…")
         GLib.timeout_add_seconds(3, self._delayed_shot, path)
 
     def _delayed_shot(self, path):
@@ -382,8 +416,10 @@ class QuickShot:
     def finish_shot(self, ok, path, err):
         if ok:
             self.copy_to_clipboard(path)
-            self.popup("截图已保存：\n%s" % path, path=path)
+            if popups_enabled():
+                self.popup("截图已保存：\n%s" % path, path=path)
         else:
+            # 出错提示不受开关影响，始终提醒
             self.popup("截图失败：%s" % (err or "未知错误"), ok=False)
 
     def copy_to_clipboard(self, path):
