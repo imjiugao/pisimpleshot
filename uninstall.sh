@@ -12,6 +12,8 @@ echo "==> 删除程序与图标"
 rm -fv "$HOME/.local/bin/quickshot"
 rm -fv "$HOME/.local/share/icons/hicolor/scalable/apps/quickshot.svg"
 rm -fv "$HOME/.local/share/icons/hicolor/48x48/apps/quickshot.png"
+rm -fv "$HOME/.local/share/icons/hicolor/scalable/apps/quickshot-success.svg"
+rm -fv "$HOME/.local/share/icons/hicolor/48x48/apps/quickshot-success.png"
 
 echo "==> 删除桌面入口与自启动项"
 rm -fv "$HOME/.local/share/applications/quickshot.desktop"

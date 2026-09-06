@@ -28,9 +28,12 @@ CONFIG_DIR = os.path.expanduser("~/.config/quickshot")
 CONFIG_FILE = os.path.join(CONFIG_DIR, "config.ini")
 
 DEFAULT_CONFIG = """[quickshot]
-# 截图完成后是否显示提示弹窗：true / false
+# 截图成功后的提示方式：
+#   icon   = 托盘图标短暂变绿勾并更新悬停提示（默认，不打扰操作）
+#   window = 弹出提示窗口（会抢焦点，4 秒后自动消失）
+#   none   = 不提示
 # 修改保存后立即生效，无需重启程序
-show_popup = true
+feedback = icon
 """
 
 
@@ -45,18 +48,27 @@ def ensure_config():
             pass
 
 
-def popups_enabled():
-    """读取弹窗开关。每次调用都重新读取文件，改动立即生效；出错时默认开启。"""
+def feedback_mode():
+    """读取提示方式：icon / window / none。
+    每次调用都重新读取文件，改动立即生效；出错时默认 icon。
+    兼容旧配置项 show_popup（true→icon，false→none）。"""
     try:
         cp = configparser.ConfigParser()
         cp.read(CONFIG_FILE, encoding="utf-8")
-        return cp.getboolean("quickshot", "show_popup", fallback=True)
+        if cp.has_option("quickshot", "feedback"):
+            v = cp.get("quickshot", "feedback").strip().lower()
+            return v if v in ("icon", "window", "none") else "icon"
+        if cp.has_option("quickshot", "show_popup"):
+            return "icon" if cp.getboolean("quickshot", "show_popup") else "none"
     except Exception:
-        return True
+        pass
+    return "icon"
 
 
 ICON_PNG = os.path.expanduser("~/.local/share/icons/hicolor/48x48/apps/quickshot.png")
 ICON_SVG = os.path.expanduser("~/.local/share/icons/hicolor/scalable/apps/quickshot.svg")
+SUCCESS_PNG = os.path.expanduser(
+    "~/.local/share/icons/hicolor/48x48/apps/quickshot-success.png")
 ITEM_PATH = "/StatusNotifierItem"
 MENU_PATH = "/StatusNotifierMenu"
 WATCHER = "org.kde.StatusNotifierWatcher"
@@ -157,9 +169,9 @@ def have(cmd):
     return shutil.which(cmd) is not None
 
 
-def icon_pixmap(size=48):
+def icon_pixmap(size=48, path=None):
     """把 PNG 图标转成 SNI 规定的 a(iiay) ARGB32 原始像素。"""
-    pb = GdkPixbuf.Pixbuf.new_from_file_at_size(ICON_PNG, size, size)
+    pb = GdkPixbuf.Pixbuf.new_from_file_at_size(path or ICON_PNG, size, size)
     w, h = pb.get_width(), pb.get_height()
     n = pb.get_n_channels()
     rs = pb.get_rowstride()
@@ -194,8 +206,12 @@ class QuickShot:
     def __init__(self):
         ensure_config()
         self.revision = 1
-        self._pixmap = icon_pixmap() if os.path.exists(ICON_PNG) else \
+        self._pixmap_normal = icon_pixmap() if os.path.exists(ICON_PNG) else \
             GLib.Variant("a(iiay)", [])
+        self._pixmap_success = icon_pixmap(path=SUCCESS_PNG) \
+            if os.path.exists(SUCCESS_PNG) else self._pixmap_normal
+        self._success_active = False
+        self._tooltip_desc = "左键：全屏截图\n右键：更多选项"
         self.bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
         self.sni_id = self.bus.register_object(
             ITEM_PATH, Gio.DBusNodeInfo.new_for_xml(SNI_XML).interfaces[0],
@@ -241,21 +257,26 @@ class QuickShot:
         if name == "Title":
             return GLib.Variant("s", "快速截图")
         if name == "Status":
-            return GLib.Variant("s", "Active")
+            # 闪绿勾期间进入 NeedsAttention 状态，面板会改用重视图标
+            return GLib.Variant("s",
+                                "NeedsAttention" if self._success_active
+                                else "Active")
         if name == "WindowId":
             return GLib.Variant("u", 0)
         if name == "IconName":
             return GLib.Variant("s", "quickshot")
         if name == "IconPixmap":
-            return self._pixmap
+            return self._pixmap_success if self._success_active \
+                else self._pixmap_normal
         if name == "AttentionIconName":
             return GLib.Variant("s", "")
         if name == "AttentionIconPixmap":
-            return GLib.Variant("a(iiay)", [])
+            return self._pixmap_success if self._success_active \
+                else GLib.Variant("a(iiay)", [])
         if name == "ToolTip":
             return GLib.Variant("(sa(iiay)ss)",
                                 ("", [], "快速截图 QuickShot",
-                                 "左键：全屏截图\n右键：更多选项"))
+                                 self._tooltip_desc))
         if name == "Menu":
             return GLib.Variant("o", MENU_PATH)
         if name == "ItemIsMenu":
@@ -404,7 +425,7 @@ class QuickShot:
 
     def shot_delay(self, *_args):
         path = self.new_path()
-        if popups_enabled():
+        if feedback_mode() == "window":
             self.popup("3 秒后开始全屏截图…")
         GLib.timeout_add_seconds(3, self._delayed_shot, path)
 
@@ -416,11 +437,39 @@ class QuickShot:
     def finish_shot(self, ok, path, err):
         if ok:
             self.copy_to_clipboard(path)
-            if popups_enabled():
+            mode = feedback_mode()
+            if mode == "icon":
+                self.flash_success(path)
+            elif mode == "window":
                 self.popup("截图已保存：\n%s" % path, path=path)
+            # none: 不提示
         else:
-            # 出错提示不受开关影响，始终提醒
+            # 出错提示不受提示方式影响，始终弹出提醒
             self.popup("截图失败：%s" % (err or "未知错误"), ok=False)
+
+    def flash_success(self, path):
+        """不打扰的成功提示：托盘图标短暂变绿勾，悬停提示显示保存路径。
+        通过 SNI 标准的 NeedsAttention 状态切换到重视图标（AttentionIcon）。"""
+        self._tooltip_desc = "上次截图已保存:\n%s" % path
+        self._success_active = True
+        self._emit_item("NewStatus", GLib.Variant("(s)", ("NeedsAttention",)))
+        self._emit_item("NewAttentionIcon")
+        self._emit_item("NewToolTip")
+        GLib.timeout_add_seconds(3, self._end_success)
+
+    def _end_success(self):
+        self._success_active = False
+        self._emit_item("NewStatus", GLib.Variant("(s)", ("Active",)))
+        self._emit_item("NewAttentionIcon")
+        return False
+
+    def _emit_item(self, signal, params=None):
+        """向面板广播托盘项信号（如 NewIcon/NewStatus），触发重新读取属性。"""
+        try:
+            self.bus.emit_signal(None, ITEM_PATH,
+                                 "org.kde.StatusNotifierItem", signal, params)
+        except GLib.Error:
+            pass
 
     def copy_to_clipboard(self, path):
         if not have("wl-copy"):

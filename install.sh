@@ -43,6 +43,8 @@ mkdir -p "$BIN" "$ICON_SCAL" "$ICON_48" "$APP_DIR" "$AUTOSTART"
 install -m 755 "$SRC_DIR/src/quickshot" "$BIN/quickshot"
 install -m 644 "$SRC_DIR/icons/quickshot.svg" "$ICON_SCAL/quickshot.svg"
 install -m 644 "$SRC_DIR/icons/quickshot.png" "$ICON_48/quickshot.png"
+install -m 644 "$SRC_DIR/icons/quickshot-success.svg" "$ICON_SCAL/quickshot-success.svg"
+install -m 644 "$SRC_DIR/icons/quickshot-success.png" "$ICON_48/quickshot-success.png"
 
 # ---- 3. 生成桌面入口与自启动 ----
 echo "==> 生成桌面入口与开机自启动"
