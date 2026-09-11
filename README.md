@@ -1,4 +1,4 @@
-# QuickShot — 树莓派托盘快速截图
+# PisimpleShot — 树莓派托盘快速截图
 
 在树莓派 OS（labwc / wf-panel-pi 桌面）屏幕右上角的面板托盘中常驻一个相机图标，
 一键快速截图。
@@ -16,10 +16,10 @@
 
 ## 配置文件
 
-配置文件位于 `~/.config/quickshot/config.ini`，首次运行时自动生成：
+配置文件位于 `~/.config/PisimpleShot/config.ini`，首次运行时自动生成：
 
 ```ini
-[quickshot]
+[PisimpleShot]
 # 截图成功后的提示方式：
 #   icon   = 托盘图标短暂变绿勾并更新悬停提示（默认，不打扰操作）
 #   window = 弹出提示窗口（会抢焦点，4 秒后自动消失）
@@ -41,7 +41,7 @@ feedback = icon
 ## 安装
 
 ```bash
-cd quickshot
+cd PisimpleShot
 ./install.sh
 ```
 
@@ -60,23 +60,23 @@ cd quickshot
 
 ## 手动启动 / 退出后再次启动
 
-- 主菜单 → 附件 → **QuickShot 快速截图**
-- 或终端执行：`~/.local/bin/quickshot &`
+- 主菜单 → 附件 → **PisimpleShot 快速截图**
+- 或终端执行：`~/.local/bin/PisimpleShot &`
 
 程序有单实例保护：重复启动不会出现两个图标。
 
 ## 文件清单
 
 ```
-quickshot/
+PisimpleShot/
 ├── install.sh              # 安装脚本
 ├── uninstall.sh            # 卸载脚本
-├── src/quickshot           # 主程序（Python 3 + PyGObject，单文件）
+├── src/PisimpleShot           # 主程序（Python 3 + PyGObject，单文件）
 └── icons/
-    ├── quickshot.svg       # 托盘/应用图标（矢量）
-    ├── quickshot.png       # 48px 位图（托盘像素图标源）
-    ├── quickshot-success.svg  # 截图成功提示图标（绿勾，矢量）
-    └── quickshot-success.png  # 成功提示图标 48px 位图
+    ├── PisimpleShot.svg       # 托盘/应用图标（矢量）
+    ├── PisimpleShot.png       # 48px 位图（托盘像素图标源）
+    ├── PisimpleShot-success.svg  # 截图成功提示图标（绿勾，矢量）
+    └── PisimpleShot-success.png  # 成功提示图标 48px 位图
 ```
 
 ## 依赖

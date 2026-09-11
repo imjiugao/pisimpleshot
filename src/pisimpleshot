@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""QuickShot — 面板托盘快速截图工具（树莓派 OS / labwc + wf-panel-pi）
+"""PisimpleShot — 面板托盘快速截图工具（树莓派 OS / labwc + wf-panel-pi）
 
 在屏幕右上角面板托盘显示一个相机图标：
   左键单击  → 立即全屏截图（保存到 ~/Pictures/Screenshots 并复制到剪贴板）
@@ -24,10 +24,10 @@ gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import GdkPixbuf, GLib, Gio, Gtk
 
 SAVE_DIR = os.path.expanduser("~/Pictures/Screenshots")
-CONFIG_DIR = os.path.expanduser("~/.config/quickshot")
+CONFIG_DIR = os.path.expanduser("~/.config/PisimpleShot")
 CONFIG_FILE = os.path.join(CONFIG_DIR, "config.ini")
 
-DEFAULT_CONFIG = """[quickshot]
+DEFAULT_CONFIG = """[PisimpleShot]
 # 截图成功后的提示方式：
 #   icon   = 托盘图标短暂变绿勾并更新悬停提示（默认，不打扰操作）
 #   window = 弹出提示窗口（会抢焦点，4 秒后自动消失）
@@ -55,20 +55,20 @@ def feedback_mode():
     try:
         cp = configparser.ConfigParser()
         cp.read(CONFIG_FILE, encoding="utf-8")
-        if cp.has_option("quickshot", "feedback"):
-            v = cp.get("quickshot", "feedback").strip().lower()
+        if cp.has_option("PisimpleShot", "feedback"):
+            v = cp.get("PisimpleShot", "feedback").strip().lower()
             return v if v in ("icon", "window", "none") else "icon"
-        if cp.has_option("quickshot", "show_popup"):
-            return "icon" if cp.getboolean("quickshot", "show_popup") else "none"
+        if cp.has_option("PisimpleShot", "show_popup"):
+            return "icon" if cp.getboolean("PisimpleShot", "show_popup") else "none"
     except Exception:
         pass
     return "icon"
 
 
-ICON_PNG = os.path.expanduser("~/.local/share/icons/hicolor/48x48/apps/quickshot.png")
-ICON_SVG = os.path.expanduser("~/.local/share/icons/hicolor/scalable/apps/quickshot.svg")
+ICON_PNG = os.path.expanduser("~/.local/share/icons/hicolor/48x48/apps/PisimpleShot.png")
+ICON_SVG = os.path.expanduser("~/.local/share/icons/hicolor/scalable/apps/PisimpleShot.svg")
 SUCCESS_PNG = os.path.expanduser(
-    "~/.local/share/icons/hicolor/48x48/apps/quickshot-success.png")
+    "~/.local/share/icons/hicolor/48x48/apps/PisimpleShot-success.png")
 ITEM_PATH = "/StatusNotifierItem"
 MENU_PATH = "/StatusNotifierMenu"
 WATCHER = "org.kde.StatusNotifierWatcher"
@@ -191,7 +191,7 @@ def icon_pixmap(size=48, path=None):
     return GLib.Variant("a(iiay)", [(w, h, bytes(out))])
 
 
-class QuickShot:
+class PisimpleShot:
     """托盘图标 + 截图逻辑 + 提示弹窗。"""
 
     # 菜单: (id, 标签, 动作)
@@ -253,7 +253,7 @@ class QuickShot:
         if name == "Category":
             return GLib.Variant("s", "ApplicationStatus")
         if name == "Id":
-            return GLib.Variant("s", "quickshot")
+            return GLib.Variant("s", "PisimpleShot")
         if name == "Title":
             return GLib.Variant("s", "快速截图")
         if name == "Status":
@@ -264,7 +264,7 @@ class QuickShot:
         if name == "WindowId":
             return GLib.Variant("u", 0)
         if name == "IconName":
-            return GLib.Variant("s", "quickshot")
+            return GLib.Variant("s", "PisimpleShot")
         if name == "IconPixmap":
             return self._pixmap_success if self._success_active \
                 else self._pixmap_normal
@@ -275,7 +275,7 @@ class QuickShot:
                 else GLib.Variant("a(iiay)", [])
         if name == "ToolTip":
             return GLib.Variant("(sa(iiay)ss)",
-                                ("", [], "快速截图 QuickShot",
+                                ("", [], "快速截图 PisimpleShot",
                                  self._tooltip_desc))
         if name == "Menu":
             return GLib.Variant("o", MENU_PATH)
@@ -497,7 +497,7 @@ class QuickShot:
 
     def popup(self, text, ok=True, path=None):
         win = Gtk.Window(type=Gtk.WindowType.TOPLEVEL)
-        win.set_title("QuickShot")
+        win.set_title("PisimpleShot")
         win.set_decorated(False)
         win.set_resizable(False)
         win.set_skip_taskbar_hint(True)
@@ -538,10 +538,10 @@ class QuickShot:
 
 def main():
     # 单实例保护：已有时不再重复显示托盘图标
-    Gio.bus_own_name(Gio.BusType.SESSION, "org.zcode.QuickShot",
+    Gio.bus_own_name(Gio.BusType.SESSION, "org.zcode.PisimpleShot",
                      Gio.BusNameOwnerFlags.NONE, None, None,
                      lambda *_: sys.exit(1))
-    QuickShot()
+    PisimpleShot()
     Gtk.main()
 
 
