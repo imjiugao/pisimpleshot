@@ -1,3 +1,5 @@
+**中文** | [English](README.en.md)
+
 # PisimpleShot — 树莓派托盘快速截图
 
 在树莓派 OS（labwc / wf-panel-pi 桌面）屏幕右上角的面板托盘中常驻一个相机图标，
@@ -41,7 +43,7 @@ feedback = icon
 ## 安装
 
 ```bash
-cd PisimpleShot
+cd pisimpleshot
 ./install.sh
 ```
 
