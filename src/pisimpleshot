@@ -65,10 +65,40 @@ def feedback_mode():
     return "icon"
 
 
-ICON_PNG = os.path.expanduser("~/.local/share/icons/hicolor/48x48/apps/PisimpleShot.png")
-ICON_SVG = os.path.expanduser("~/.local/share/icons/hicolor/scalable/apps/PisimpleShot.svg")
-SUCCESS_PNG = os.path.expanduser(
-    "~/.local/share/icons/hicolor/48x48/apps/PisimpleShot-success.png")
+ICON_NAME = "pisimpleshot"
+SUCCESS_ICON_NAME = "pisimpleshot-success"
+ICON_APPS_DIR = os.path.expanduser("~/.local/share/icons/hicolor/48x48/apps")
+ICON_SCAL_DIR = os.path.expanduser("~/.local/share/icons/hicolor/scalable/apps")
+# 直接运行源码（未安装）时也从仓库 icons/ 目录取图，便于开发调试
+SRC_ICONS_DIR = os.path.normpath(os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), os.pardir, "icons"))
+
+
+def _icon_path(name, ext, primary_dir):
+    """定位图标文件：安装目录 → 图标主题查找 → 源码仓库目录。
+
+    图标主题查找在文件名大小写不一致时也能命中，避免出现空图标。
+    全都没找到时返回首选路径（调用方用 os.path.exists 判断，得到 False）。
+    """
+    cands = [os.path.join(primary_dir, name + ext),
+             os.path.join(SRC_ICONS_DIR, name + ext)]
+    if not any(os.path.exists(p) for p in cands):
+        # 兜底：按图标名查找（大小写不一致时也能命中），避免面板上出现空白图标
+        try:
+            info = Gtk.IconTheme.get_default().lookup_icon(name, 48, 0)
+            if info:
+                cands.append(info.get_filename())
+        except Exception:
+            pass
+    for p in cands:
+        if p and os.path.exists(p):
+            return p
+    return cands[0]
+
+
+ICON_PNG = _icon_path(ICON_NAME, ".png", ICON_APPS_DIR)
+ICON_SVG = _icon_path(ICON_NAME, ".svg", ICON_SCAL_DIR)
+SUCCESS_PNG = _icon_path(SUCCESS_ICON_NAME, ".png", ICON_APPS_DIR)
 ITEM_PATH = "/StatusNotifierItem"
 MENU_PATH = "/StatusNotifierMenu"
 WATCHER = "org.kde.StatusNotifierWatcher"
@@ -206,8 +236,13 @@ class PisimpleShot:
     def __init__(self):
         ensure_config()
         self.revision = 1
-        self._pixmap_normal = icon_pixmap() if os.path.exists(ICON_PNG) else \
-            GLib.Variant("a(iiay)", [])
+        if os.path.exists(ICON_PNG):
+            self._pixmap_normal = icon_pixmap()
+        else:
+            # 图标缺失时面板上只会留一块空白，这里必须显式报错而不是静默继续
+            print("警告：找不到图标文件 %s，托盘图标将不显示（请运行 install.sh）"
+                  % ICON_PNG, file=sys.stderr)
+            self._pixmap_normal = GLib.Variant("a(iiay)", [])
         self._pixmap_success = icon_pixmap(path=SUCCESS_PNG) \
             if os.path.exists(SUCCESS_PNG) else self._pixmap_normal
         self._success_active = False
@@ -264,12 +299,12 @@ class PisimpleShot:
         if name == "WindowId":
             return GLib.Variant("u", 0)
         if name == "IconName":
-            return GLib.Variant("s", "PisimpleShot")
+            return GLib.Variant("s", ICON_NAME)
         if name == "IconPixmap":
             return self._pixmap_success if self._success_active \
                 else self._pixmap_normal
         if name == "AttentionIconName":
-            return GLib.Variant("s", "")
+            return GLib.Variant("s", SUCCESS_ICON_NAME if self._success_active else "")
         if name == "AttentionIconPixmap":
             return self._pixmap_success if self._success_active \
                 else GLib.Variant("a(iiay)", [])

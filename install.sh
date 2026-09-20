@@ -46,6 +46,11 @@ install -m 644 "$SRC_DIR/icons/pisimpleshot.png" "$ICON_48/pisimpleshot.png"
 install -m 644 "$SRC_DIR/icons/pisimpleshot-success.svg" "$ICON_SCAL/pisimpleshot-success.svg"
 install -m 644 "$SRC_DIR/icons/pisimpleshot-success.png" "$ICON_48/pisimpleshot-success.png"
 
+# 刷新图标主题缓存：hicolor 主题缓存过期会导致按图标名查找失败（图标不显示）
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+    gtk-update-icon-cache -q -t -f "$HOME/.local/share/icons/hicolor" 2>/dev/null || true
+fi
+
 # ---- 3. 生成桌面入口与自启动 ----
 echo "==> 生成桌面入口与开机自启动"
 for target in "$APP_DIR/pisimpleshot.desktop" "$AUTOSTART/pisimpleshot.desktop"; do

@@ -61,23 +61,26 @@ cd PisimpleShot
 ## 手动启动 / 退出后再次启动
 
 - 主菜单 → 附件 → **PisimpleShot 快速截图**
-- 或终端执行：`~/.local/bin/PisimpleShot &`
+- 或终端执行：`~/.local/bin/pisimpleshot &`
 
 程序有单实例保护：重复启动不会出现两个图标。
 
 ## 文件清单
 
 ```
-PisimpleShot/
+pisimpleshot/
 ├── install.sh              # 安装脚本
 ├── uninstall.sh            # 卸载脚本
-├── src/PisimpleShot           # 主程序（Python 3 + PyGObject，单文件）
+├── src/pisimpleshot        # 主程序（Python 3 + PyGObject，单文件）
 └── icons/
-    ├── PisimpleShot.svg       # 托盘/应用图标（矢量）
-    ├── PisimpleShot.png       # 48px 位图（托盘像素图标源）
-    ├── PisimpleShot-success.svg  # 截图成功提示图标（绿勾，矢量）
-    └── PisimpleShot-success.png  # 成功提示图标 48px 位图
+    ├── pisimpleshot.svg         # 托盘/应用图标（矢量）
+    ├── pisimpleshot.png         # 48px 位图（托盘像素图标源）
+    ├── pisimpleshot-success.svg # 截图成功提示图标（绿勾，矢量）
+    └── pisimpleshot-success.png # 成功提示图标 48px 位图
 ```
+
+> 图标文件名与代码里的 `ICON_NAME`、桌面入口的 `Icon=` 必须完全一致（**全小写**）。
+> 文件名大小写不一致时图标主题查找会失败，托盘上只剩一块空白。
 
 ## 依赖
 
